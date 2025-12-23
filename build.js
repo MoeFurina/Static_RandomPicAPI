@@ -135,13 +135,14 @@ function build() {
                 }
             }
 
-            // 2. Scan text nodes
-            if (document.body) {
-                var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+            // 2. Scan text nodes (including inside <style> tags)
+            var rootNode = document.documentElement || document.body;
+            if (rootNode) {
+                var walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, null, false);
                 var node;
                 while (node = walker.nextNode()) {
-                    // Skip if parent is script or style
-                    if (node.parentNode && (node.parentNode.tagName === 'SCRIPT' || node.parentNode.tagName === 'STYLE')) continue;
+                    // Skip if parent is script (but allow style)
+                    if (node.parentNode && node.parentNode.tagName === 'SCRIPT') continue;
                     
                     if (node.nodeValue && node.nodeValue.indexOf(placeholder) !== -1) {
                         node.nodeValue = node.nodeValue.replace(regex, url);
@@ -187,6 +188,18 @@ function createDemoHtml() {
         img { max-width: 100%; height: auto; border-radius: 4px; }
         .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
         .bg-box { width: 100%; height: 200px; background-size: cover; background-position: center; border-radius: 4px; border: 1px dashed #999; display: flex; align-items: center; justify-content: center; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); font-weight: bold; }
+        
+        /* CSS Variable Example in Style Tag */
+        :root {
+            --random-bg-h: url('https://random:h');
+        }
+        .css-var-box {
+            width: 100%; height: 100px; 
+            background-image: var(--random-bg-h);
+            background-size: cover;
+            border: 1px solid red;
+            display: flex; align-items: center; justify-content: center; color: white; text-shadow: 0 1px 3px black;
+        }
     </style>
 </head>
 <body>
@@ -199,21 +212,17 @@ function createDemoHtml() {
         <img src="https://random:h" alt="Loading random horizontal image..." />
         <br><br>
         
-        <p>Link example (href replacement):</p>
-        <!-- href replacement -->
-        <a href="https://random:h" class="btn" target="_blank">Open Random Horizontal Image</a>
-        <br><br>
-        
-        <p>Background Image example (style replacement):</p>
-        <!-- style replacement -->
-        <div class="bg-box" style="background-image: url('https://random:h');">
-            Background Image
+        <p>Complex Inline Style (CSS Variables):</p>
+        <!-- Complex Inline Style Replacement -->
+        <div style="--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;--configHue: 361;--page-width: 75rem;--bg-url: url(https://random:h);--bg-enable: 1;--bg-position: center;--bg-size: cover;--bg-repeat: no-repeat;--bg-attachment: fixed;--bg-opacity: 0.5; width: 100%; height: 200px; background-image: var(--bg-url); background-size: cover;">
+            Complex Inline Style Box
         </div>
         <br><br>
 
-        <p>Any Attribute (e.g. data-url):</p>
-        <!-- data-url replacement -->
-        <input type="text" value="https://random:h" style="width: 100%;" readonly>
+        <p>CSS Variable defined in &lt;style&gt; tag:</p>
+        <div class="css-var-box">
+            CSS Variable Box
+        </div>
     </div>
 
     <div class="card">
