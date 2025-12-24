@@ -99,7 +99,12 @@ var urlV = window.getRandomPicV();
 console.log(urlV);
 ```
 
-## 5. 目录结构
+## 5. 画廊页面 (Gallery Page)
+构建脚本会自动生成一个静态画廊页面 `dist/gallery.html`。
+该页面采用瀑布流布局 (Waterfall Layout) 和懒加载 (Lazy Loading) 技术，展示所有的随机图片。
+你可以直接访问 `/gallery.html` 来查看所有图片。
+
+## 6. 目录结构
 *   `ri/` - 图片源目录
     *   `ri/h/` - 放入横屏图片
     *   `ri/v/` - 放入竖屏图片
@@ -107,9 +112,10 @@ console.log(urlV);
     *   `ri/` - 处理后的图片
     *   `random.js` - **核心逻辑文件**
     *   `index.html` - 演示页面
+    *   `gallery.html` - 画廊页面
 *   `build.js` - 构建脚本
 *   `config.json` - 配置文件
 
-## 6. 注意事项
+## 7. 注意事项
 *   每次添加新图片后，都需要重新运行 `node build.js`。
 *   构建会清空 `dist` 目录，请勿在 `dist` 中直接修改文件。

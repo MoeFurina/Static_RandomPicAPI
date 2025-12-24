@@ -243,8 +243,217 @@ function build() {
     } else {
         createDemoHtml();
     }
+
+    // 4. Generate Gallery Page
+    createGalleryHtml(counts, config);
     
     console.log('Build complete. Output is in /dist folder.');
+}
+
+function createGalleryHtml(counts, config) {
+    const domain = config.domain;
+    const types = Object.keys(counts);
+
+    // 1. Prepare Libs in dist/lib
+    const libDir = path.join(DIST, 'lib');
+    fs.mkdirSync(libDir, { recursive: true });
+    
+    try {
+        // Try to copy from node_modules if they exist
+        const masonrySrc = path.join(ROOT, 'node_modules', 'masonry-layout', 'dist', 'masonry.pkgd.min.js');
+        const imagesLoadedSrc = path.join(ROOT, 'node_modules', 'imagesloaded', 'imagesloaded.pkgd.min.js');
+        const lozadSrc = path.join(ROOT, 'node_modules', 'lozad', 'dist', 'lozad.min.js');
+        
+        if (fs.existsSync(masonrySrc)) fs.copyFileSync(masonrySrc, path.join(libDir, 'masonry.pkgd.min.js'));
+        if (fs.existsSync(imagesLoadedSrc)) fs.copyFileSync(imagesLoadedSrc, path.join(libDir, 'imagesloaded.pkgd.min.js'));
+        if (fs.existsSync(lozadSrc)) fs.copyFileSync(lozadSrc, path.join(libDir, 'lozad.min.js'));
+    } catch (e) {
+        console.warn('Could not copy libraries. Ensure npm install is run.', e);
+    }
+
+    let galleryContent = '';
+
+    // 2. Generate Sections per Type
+    let navButtons = `<button class="filter-btn active" onclick="filterGallery('all')">All</button>`;
+    
+    types.forEach(type => {
+        const count = counts[type];
+        if (count === 0) return;
+
+        navButtons += `<button class="filter-btn" onclick="filterGallery('${type}')">${type.toUpperCase()}</button>`;
+
+        let itemsHtml = '';
+        for (let i = 1; i <= count; i++) {
+             const url = domain ? `${domain}/ri/${type}/${i}.webp` : `./ri/${type}/${i}.webp`;
+             // Use data-src for lozad, add class 'lozad'
+             itemsHtml += `<div class="grid-item"><img class="lozad" data-src="${url}" alt="${type}-${i}"></div>\n`;
+        }
+
+        galleryContent += `
+        <section id="section-${type}" class="gallery-section">
+            <h2>Folder: ${type}</h2>
+            <div class="grid" id="grid-${type}">
+                <div class="grid-sizer"></div>
+                ${itemsHtml}
+            </div>
+        </section>
+        `;
+    });
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Static Random Pic API</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 20px; }
+        
+        /* Filter Nav */
+        .filter-nav { text-align: center; margin-bottom: 30px; }
+        .filter-btn {
+            background: #fff; border: 1px solid #ddd; padding: 8px 16px; margin: 0 5px;
+            border-radius: 20px; cursor: pointer; transition: all 0.2s; font-size: 14px;
+            color: #555;
+        }
+        .filter-btn:hover { background: #f8f9fa; border-color: #ccc; }
+        .filter-btn.active { background: #007bff; color: white; border-color: #007bff; }
+
+        h2 { border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top: 40px; color: #555; text-transform: uppercase; font-size: 1.2rem; }
+        
+        /* Masonry Grid */
+        .grid {
+            margin: 0 auto;
+        }
+        .grid-sizer, .grid-item {
+            width: 23%; /* 4 columns by default */
+            margin-bottom: 10px;
+        }
+        .grid-item {
+            float: left;
+            background: #fff;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            min-height: 150px; /* Initial loading height */
+            background-color: #eee;
+            transition: background-color 0.3s;
+        }
+        /* When loaded, remove min-height constraint so it fits content exactly */
+        .grid-item.content-loaded {
+            min-height: 0;
+            background-color: #fff;
+        }
+        
+        .grid-item img {
+            display: block;
+            width: 100%;
+            height: auto;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        /* Fade in when loaded */
+        .grid-item img[data-loaded="true"] {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .grid-sizer, .grid-item { width: 31%; }
+        }
+        @media (max-width: 800px) {
+            .grid-sizer, .grid-item { width: 48%; }
+        }
+        @media (max-width: 500px) {
+            .grid-sizer, .grid-item { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Static Image Gallery</h1>
+    
+    <div class="filter-nav">
+        ${navButtons}
+    </div>
+
+    ${galleryContent}
+
+    <!-- Libs -->
+    <script src="lib/masonry.pkgd.min.js"></script>
+    <script src="lib/imagesloaded.pkgd.min.js"></script>
+    <script src="lib/lozad.min.js"></script>
+    <script>
+        var masonryInstances = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var grids = document.querySelectorAll('.grid');
+            
+            // Initialize Masonry first
+            grids.forEach(function(grid) {
+                var msnry = new Masonry(grid, {
+                    itemSelector: '.grid-item',
+                    columnWidth: '.grid-sizer',
+                    percentPosition: true,
+                    gutter: 15
+                });
+                masonryInstances.push(msnry);
+            });
+
+            // Initialize Lozad (Lazy Loading)
+            const observer = lozad('.lozad', {
+                loaded: function(el) {
+                    // Function to handle load complete
+                    const onImgLoad = function() {
+                        el.setAttribute('data-loaded', true);
+                        el.closest('.grid-item').classList.add('content-loaded');
+                        // Trigger Masonry layout update
+                        masonryInstances.forEach(msnry => msnry.layout());
+                    };
+
+                    if (el.complete && el.naturalHeight !== 0) {
+                        onImgLoad();
+                    } else {
+                        el.onload = onImgLoad;
+                    }
+                }
+            });
+            observer.observe();
+        });
+
+        function filterGallery(type) {
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Filter sections
+            document.querySelectorAll('.gallery-section').forEach(sec => {
+                if (type === 'all' || sec.id === 'section-' + type) {
+                    sec.style.display = 'block';
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
+            
+            // Trigger Lozad observation on visible elements
+            // (Lozad observes viewport, but hiding/showing might affect it)
+            // Actually Lozad uses IntersectionObserver so it should handle it.
+            
+            setTimeout(() => {
+                masonryInstances.forEach(msnry => msnry.layout());
+            }, 10);
+        }
+    </script>
+</body>
+</html>`;
+
+    fs.writeFileSync(path.join(DIST, 'gallery.html'), htmlContent);
+    console.log('Created gallery.html in dist');
 }
 
 function createDemoHtml() {
@@ -264,7 +473,10 @@ function createDemoHtml() {
 </head>
 <body>
     <h1>Static Random Pic API (Client-Side)</h1>
-    <p>This is a static implementation. Images are randomized at build time.</p>
+    <p>
+        This is a static implementation. Images are randomized at build time.
+        <a href="gallery.html" class="btn" style="float: right;">View Gallery</a>
+    </p>
 
     <div class="card">
         <h2>Horizontal Image (横屏)</h2>
