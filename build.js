@@ -407,6 +407,8 @@ function createGalleryHtml(counts, config) {
 
             // Initialize Lozad (Lazy Loading)
             const observer = lozad('.lozad', {
+                rootMargin: '200px 0px', // Start loading earlier
+                threshold: 0, // Trigger immediately when even 1px is visible (or within margin)
                 loaded: function(el) {
                     // Function to handle load complete
                     const onImgLoad = function() {
@@ -424,6 +426,11 @@ function createGalleryHtml(counts, config) {
                 }
             });
             observer.observe();
+
+            // Force a layout check after a short delay to ensure Masonry has set up correctly
+            setTimeout(() => {
+                masonryInstances.forEach(msnry => msnry.layout());
+            }, 100);
         });
 
         function filterGallery(type) {
